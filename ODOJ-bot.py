@@ -6,6 +6,51 @@ from datetime import datetime
 import pytz
 import os
 import json
+from flask import Flask
+from threading import Thread
+import logging
+
+# Setup bot
+# DC bot setup
+intents = discord.Intents.default()
+intents.message_content = True
+intents.reactions = True
+intents.guilds = True
+intents.members = True
+
+TOKEN = os.environ["DISCORD_BOT_TOKEN"]
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+LOG_CHANNEL_ID = 1345452618264350751  # Replace with your private log channel ID
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("discord")
+
+# Function to send logs to Discord
+async def send_log_to_discord(message):
+    channel = bot.get_channel(LOG_CHANNEL_ID)
+    if channel:
+        await channel.send(f"📝 {message}")
+
+@bot.event
+async def on_command_error(ctx, error):
+    await send_log_to_discord(f"❌ Error: {error}")
+    logger.error(f"Error: {error}")
+
+# Keeping bot alive
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Bot is running!"
+
+def run():
+    app.run(host="0.0.0.0", port=8080)
+
+def keep_alive():
+    server = Thread(target=run)
+    server.start()
 
 # Get current UTC time properly
 utc_now = datetime.now(pytz.UTC)
@@ -33,21 +78,12 @@ client = gspread.authorize(creds)
 daily_sheet = client.open("ODOJ_database").worksheet("daily")
 khatam_sheet = client.open("ODOJ_database").worksheet("khatam")
 
-# DC bot setup
-intents = discord.Intents.default()
-intents.message_content = True
-intents.reactions = True
-intents.guilds = True
-intents.members = True
-
-TOKEN = os.environ["DISCORD_BOT_TOKEN"]
-
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user.name}")
+
+    await send_log_to_discord("✅ Bot is online!")
+    logger.info("Bot is running!")
 
     """Re-add reactions to the role message when the bot starts."""
     if role_message_id:
@@ -57,7 +93,7 @@ async def on_ready():
                     message = await channel.fetch_message(role_message_id)
                     for emoji in emoji_to_role.keys():
                         await message.add_reaction(emoji)
-                    print("✅ Ensured reactions on role assignment message.")
+                    await send_log_to_discord("✅ Ensured reactions on role assignment message.")
                     return  # Stop searching once found
                 except:
                     continue
@@ -82,7 +118,7 @@ async def setrolemessage(ctx, message_id: int):
     for emoji in emoji_to_role.keys():
         await message.add_reaction(emoji)
 
-    print(f"✅ Tracking reactions on message ID {message_id} with default emojis.")
+    await send_log_to_discord(f"✅ Tracking reactions on message ID {message_id} with default emojis.")
 
 
 @bot.event
@@ -279,4 +315,5 @@ async def stop_reminders(ctx):
 
 
 # Run the bot
+keep_alive()
 bot.run(TOKEN)
