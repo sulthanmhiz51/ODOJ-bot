@@ -3,16 +3,31 @@ from discord.ext import commands, tasks
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
+import pytz
 import os
-from dotenv import load_dotenv
+import json
+
+# Get current UTC time properly
+utc_now = datetime.now(pytz.UTC)
+
+# Convert to Indonesia Time (WIB, WITA, or WIT)
+indonesia_tz = pytz.timezone("Asia/Jakarta")  # WIB (UTC+7)
+local_time = utc_now.astimezone(indonesia_tz)
 
 # G Sheets setup
+creds_json = os.getenv("GSPREAD_CREDENTIALS")
+
+if creds_json is None:
+    raise ValueError("GSPREAD_CREDENTIALS is missing!")
+
+creds_dict = json.loads(creds_json)  # Convert JSON string back to dict
+
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive",
 ]
-creds = ServiceAccountCredentials.from_json_keyfile_name(
-    "odoj-bot-ca96970061f7.json", scope
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    creds_dict, scope
 )
 client = gspread.authorize(creds)
 daily_sheet = client.open("ODOJ_database").worksheet("daily")
@@ -25,8 +40,7 @@ intents.reactions = True
 intents.guilds = True
 intents.members = True
 
-load_dotenv()
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+TOKEN = os.environ["DISCORD_BOT_TOKEN"]
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -135,7 +149,7 @@ async def on_raw_reaction_remove(payload):
 async def khalas(ctx):
     """User submits recitation completion."""
     user = str(ctx.author.display_name)
-    date = datetime.now().strftime("%d-%m-%Y")
+    date = local_time.strftime("%d-%m-%Y")
 
     # Confirmation message
     message = await ctx.send(
@@ -182,7 +196,7 @@ async def khatam(ctx):
     member = ctx.author
 
     # Get current date
-    completion_date = datetime.now().strftime("%d-%m-%Y")
+    completion_date = local_time.strftime("%d-%m-%Y")
 
     # Confirmation message
     message = await ctx.send(
