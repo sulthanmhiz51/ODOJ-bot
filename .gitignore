@@ -1,3 +1,3 @@
-"DISCORD_BOT_TOKEN.env" >> .gitignore
-"odoj-bot-ca96970061f7.json" >> .gitignore
-"__pycache__/" >> .gitignore
+DISCORD_BOT_TOKEN.env
+odoj-bot-ca96970061f7.json
+__pycache__/
