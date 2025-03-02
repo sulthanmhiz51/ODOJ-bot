@@ -7,30 +7,29 @@
 ## Introduction
 
 ### What is ODOJ?
+
 One Day One Juz is a common Quran recitation program. It simply means reading a Juz (Part) of Quran each day, often with a target of completing recitation of the whole Quran (30 Juz) by the end of the month.
 
 ODOJ can be practiced individually, but often practiced as a community so members could remind and support each other.
 
 ### ODOJ-bot
+
 ODOJ-bot is a Discord bot designed to help muslim communities managing their One Day One Juz program. With simple Discord commands, communities will gain access to our helpful features, such as role assignment based on Ikhwan or Akhwat, daily and completion (khatam) recitation records, progress tracker, daily reminder, and more.
 
 ## Features
 
-###
+- **Role Assignment**: Users can choose between Ikhwan and Akhwat roles by reacting to a role message.
 
-### Daily & completion (Khatam) records
-When user finishes their recitation, daily or completion, they could simply use the respective command below to record their progress:
+- **Daily & Completion Records**: Users can log their daily recitations or completion using simple commands (!khalas for daily, !khatam for completion).
 
- - Daily records [`!khalas`]
+- **Progress Tracking**: Users can track their recitation progress with the !progress command.
 
-![khalas](img\khalas.png)
+- **Daily Reminders**: The bot will send users daily reminders for their recitation (under development).
 
-> Use `!khalas` command for daily record. The bot will prompt verification message before recording your progress
+## Planned features
 
-- Completion (Khatam) records [`!khatam`]
+- **Dashboard**
 
-![khatam](img\khatam.png)
+- **Personalized scheduled reminder**
 
-> Use `!khatam` command for completion record. The bot will prompt verification message before recording your progress
-
-### Progress tracking
+- **...**

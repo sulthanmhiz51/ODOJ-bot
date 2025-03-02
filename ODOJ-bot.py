@@ -10,6 +10,7 @@ from flask import Flask
 from threading import Thread
 import logging
 from asyncio import sleep
+from dotenv import load_dotenv
 
 # Setup bot
 # DC bot setup
@@ -19,10 +20,28 @@ intents.reactions = True
 intents.guilds = True
 intents.members = True
 
-TOKEN = os.environ["DISCORD_BOT_TOKEN"]
+load_dotenv()
+TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 LOG_CHANNEL_ID = 1345452618264350751  # Replace with your private log channel ID
+
+# G Sheets setup
+creds_json = os.getenv('GSPREAD_CREDENTIALS')
+
+if creds_json is None:
+    raise ValueError("GSPREAD_CREDENTIALS is missing!")
+
+creds_dict = json.loads(creds_json)  # Convert JSON string back to dict
+
+scope = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/drive",
+]
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+client = gspread.authorize(creds)
+daily_sheet = client.open("ODOJ_database").worksheet("daily")
+khatam_sheet = client.open("ODOJ_database").worksheet("khatam")
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -42,22 +61,22 @@ async def on_command_error(ctx, error):
     logger.error(f"Error: {error}")
 
 
-# Keeping bot alive
-app = Flask(__name__)
+# # Keeping bot alive
+# app = Flask(__name__)
 
 
-@app.route("/")
-def home():
-    return "Bot is running!"
+# @app.route("/")
+# def home():
+#     return "Bot is running!"
 
 
-def run():
-    app.run(host="0.0.0.0", port=8080)
+# def run():
+#     app.run(host="0.0.0.0", port=8080)
 
 
-def keep_alive():
-    server = Thread(target=run)
-    server.start()
+# def keep_alive():
+#     server = Thread(target=run)
+#     server.start()
 
 
 # Get current UTC time properly
@@ -66,24 +85,6 @@ utc_now = datetime.now(pytz.UTC)
 # Convert to Indonesia Time (WIB, WITA, or WIT)
 indonesia_tz = pytz.timezone("Asia/Jakarta")  # WIB (UTC+7)
 local_time = utc_now.astimezone(indonesia_tz)
-
-# G Sheets setup
-creds_json = os.getenv("GSPREAD_CREDENTIALS")
-
-if creds_json is None:
-    raise ValueError("GSPREAD_CREDENTIALS is missing!")
-
-creds_dict = json.loads(creds_json)  # Convert JSON string back to dict
-
-scope = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive",
-]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-client = gspread.authorize(creds)
-daily_sheet = client.open("ODOJ_database").worksheet("daily")
-khatam_sheet = client.open("ODOJ_database").worksheet("khatam")
-
 
 @bot.event
 async def on_ready():
@@ -163,7 +164,7 @@ async def on_raw_reaction_add(payload):
             if member and role and not member.bot:
                 await member.add_roles(role)
                 
-                await member.send(f"You have been assigned the role of {role.name}")
+                await member.send(f"✅ You have been assigned {role.name} role")
 
                 log_channel = bot.get_channel(
                     1345452618264350751
@@ -187,6 +188,8 @@ async def on_raw_reaction_remove(payload):
 
             if member and role and not member.bot:
                 await member.remove_roles(role)
+                
+                await member.send(f"❌ You have been removed from {role.name} role")
 
                 log_channel = bot.get_channel(
                     1345452618264350751
@@ -369,5 +372,5 @@ async def reminder_status(ctx):
 
 
 # Run the bot
-keep_alive()
+# keep_alive()
 bot.run(TOKEN)
