@@ -9,6 +9,7 @@ import json
 from flask import Flask
 from threading import Thread
 import logging
+from asyncio import sleep
 
 # Setup bot
 # DC bot setup
@@ -98,19 +99,32 @@ async def on_ready():
                 except:
                     continue
 
+# Load existing role message ID (if any)
+def load_role_message():
+    try:
+        with open("role_config.json", "r") as file:
+            return json.load(file).get("role_message_id", None)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
 
-role_message_id = 123456789012345678  # Replace this with the actual message ID
+def save_role_message(message_id):
+    with open("role_config.json", "w") as file:
+        json.dump({"role_message_id": message_id}, file)
+
+role_message_id = load_role_message()  # Load saved message ID
+
 emoji_to_role = {
-    "👳‍♀️": 1345361603805319288,  # Replace with the actual role ID for "Member"
-    "🧕": 1345361683845222441,  # Replace with the actual role ID for "Gamer"
+    "👳‍♀️": 1345361603805319288,  # Replace with actual role IDs
+    "🧕": 1345361683845222441,
 }
 
-
 @bot.command()
+@commands.has_role("admin")
 async def setrolemessage(ctx, message_id: int):
-    """Sets the message ID and ensures reactions are added."""
+    """Sets the message ID and stores it for role assignment."""
     global role_message_id
     role_message_id = message_id
+    save_role_message(message_id)  # Save to file
 
     message = await ctx.channel.fetch_message(message_id)
 
@@ -118,25 +132,12 @@ async def setrolemessage(ctx, message_id: int):
     for emoji in emoji_to_role.keys():
         await message.add_reaction(emoji)
 
-    await send_log_to_discord(f"✅ Tracking reactions on message ID {message_id} with default emojis.")
-
-
-@bot.event
-async def on_raw_reaction_miss(payload):
-    """Re-adds removed reaction if it's in the role selection list."""
-    if payload.message_id == role_message_id:
-        channel = bot.get_channel(payload.channel_id)
-        message = await channel.fetch_message(payload.message_id)
-
-        # Check if the removed emoji is part of the selection
-        if payload.emoji.name in emoji_to_role.keys():
-            await message.add_reaction(payload.emoji.name)
-
+    await ctx.send(f"✅ Tracking reactions on message ID {message_id} with default emojis.")
 
 @bot.event
 async def on_raw_reaction_add(payload):
-    """Assigns a role when a user reacts to the specific message."""
-    if payload.message_id == role_message_id:
+    """Assigns a role when a user reacts to the stored message."""
+    if role_message_id and payload.message_id == role_message_id:
         guild = bot.get_guild(payload.guild_id)
         role_id = emoji_to_role.get(payload.emoji.name)
 
@@ -144,23 +145,17 @@ async def on_raw_reaction_add(payload):
             role = guild.get_role(role_id)
             member = guild.get_member(payload.user_id)
 
-            if member and role and not member.bot:  # Ignore bot reactions
+            if member and role and not member.bot:
                 await member.add_roles(role)
 
-                # ✅ Send confirmation to a specific channel
-                channel = bot.get_channel(
-                    1345304726220181586
-                )  # Replace with your log channel ID
-                if channel:
-                    await channel.send(
-                        f"✅ Assigned {role.name} to {member.display_name}"
-                    )
-
+                log_channel = bot.get_channel(1345452618264350751)  # Replace with log channel ID
+                if log_channel:
+                    await log_channel.send(f"✅ Assigned {role.name} to {member.display_name}")
 
 @bot.event
 async def on_raw_reaction_remove(payload):
     """Removes a role when a user removes their reaction."""
-    if payload.message_id == role_message_id:
+    if role_message_id and payload.message_id == role_message_id:
         guild = bot.get_guild(payload.guild_id)
         role_id = emoji_to_role.get(payload.emoji.name)
 
@@ -168,18 +163,12 @@ async def on_raw_reaction_remove(payload):
             role = guild.get_role(role_id)
             member = guild.get_member(payload.user_id)
 
-            if member and role and not member.bot:  # Ignore bot reactions
+            if member and role and not member.bot:
                 await member.remove_roles(role)
 
-                # ✅ Send confirmation to a specific channel
-                channel = bot.get_channel(
-                    1345304726220181586
-                )  # Replace with your log channel ID
-                if channel:
-                    await channel.send(
-                        f"❌ Removed {role.name} from {member.display_name}"
-                    )
-
+                log_channel = bot.get_channel(1345452618264350751)  # Replace with log channel ID
+                if log_channel:
+                    await log_channel.send(f"❌ Removed {role.name} from {member.display_name}")
 
 @bot.command()
 async def khalas(ctx):
@@ -261,13 +250,25 @@ async def khatam(ctx):
 
 @tasks.loop(hours=24)
 async def daily_reminder():
-    """Sends a daily reminder via DM."""
-    for member in bot.get_all_members():
-        try:
-            await member.send("📖 Reminder: Don't forget to recite the Quran today!")
-        except:
-            pass  # Ignore users who have DMs closed
+    guild = bot.get_guild(1271467172258119763)  # Replace with your server ID
+    role_names = ["Ikhwan", "Akhwat"]  # Add multiple role names here
+    members_to_notify = set()  # Use a set to avoid duplicate members
 
+    for role_name in role_names:
+        role = discord.utils.get(guild.roles, name=role_name)
+        if role:
+            members_to_notify.update(role.members)
+
+        count = 0
+    for member in members_to_notify:
+        try:
+            await member.send("📖 Reminder: Don't forget to complete your daily recitation!")
+            await member.send("Report your recitation at <#1345388935186087956>! or <#1345388978635014164>")
+            count += 1
+        except discord.Forbidden:
+            await send_log_to_discord(f"❌ Couldn't send DM to {member.name}.")
+
+    await send_log_to_discord(f"✅ Sent reminders to a total of {count} Ikhwan and Akhwat!")
 
 @bot.command()
 async def progress(ctx):
@@ -309,10 +310,26 @@ async def start_reminders(ctx):
 @bot.command()
 @commands.has_role("admin")
 async def stop_reminders(ctx):
-    """Start daily reminders (admin only)."""
-    daily_reminder.stop()
+    """Stop daily reminders (admin only)."""
+    daily_reminder.cancel()
     await ctx.send("Daily reminders stopped!")
 
+@bot.command()
+@commands.has_role("admin")
+async def reset_reminders(ctx):
+    """Reset daily reminders (admin only)."""
+    if daily_reminder.is_running():
+        daily_reminder.cancel()
+        await sleep(1)
+        daily_reminder.start()
+        await ctx.send("Daily reminders have been reseted!")
+
+@bot.command()
+@commands.has_role("admin")
+async def reminder_status(ctx):
+    """Checks if the reminder loop is running."""
+    status = "✅ Running" if daily_reminder.is_running() else "⏹️ Stopped"
+    await ctx.send(f"Reminder loop status: {status}")
 
 # Run the bot
 keep_alive()

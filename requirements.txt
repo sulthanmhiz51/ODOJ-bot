@@ -118,3 +118,4 @@ watchdog==4.0.1
 Werkzeug==3.0.4
 wrapt==1.16.0
 yarl==1.18.3
+flask
