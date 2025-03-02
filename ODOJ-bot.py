@@ -162,6 +162,8 @@ async def on_raw_reaction_add(payload):
 
             if member and role and not member.bot:
                 await member.add_roles(role)
+                
+                await member.send(f"You have been assigned the role of {role.name}")
 
                 log_channel = bot.get_channel(
                     1345452618264350751
