@@ -28,30 +28,37 @@ LOG_CHANNEL_ID = 1345452618264350751  # Replace with your private log channel ID
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("discord")
 
+
 # Function to send logs to Discord
 async def send_log_to_discord(message):
     channel = bot.get_channel(LOG_CHANNEL_ID)
     if channel:
         await channel.send(f"📝 {message}")
 
+
 @bot.event
 async def on_command_error(ctx, error):
     await send_log_to_discord(f"❌ Error: {error}")
     logger.error(f"Error: {error}")
 
+
 # Keeping bot alive
 app = Flask(__name__)
+
 
 @app.route("/")
 def home():
     return "Bot is running!"
 
+
 def run():
     app.run(host="0.0.0.0", port=8080)
+
 
 def keep_alive():
     server = Thread(target=run)
     server.start()
+
 
 # Get current UTC time properly
 utc_now = datetime.now(pytz.UTC)
@@ -72,12 +79,11 @@ scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive",
 ]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(
-    creds_dict, scope
-)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 daily_sheet = client.open("ODOJ_database").worksheet("daily")
 khatam_sheet = client.open("ODOJ_database").worksheet("khatam")
+
 
 @bot.event
 async def on_ready():
@@ -94,10 +100,13 @@ async def on_ready():
                     message = await channel.fetch_message(role_message_id)
                     for emoji in emoji_to_role.keys():
                         await message.add_reaction(emoji)
-                    await send_log_to_discord("✅ Ensured reactions on role assignment message.")
+                    await send_log_to_discord(
+                        "✅ Ensured reactions on role assignment message."
+                    )
                     return  # Stop searching once found
                 except:
                     continue
+
 
 # Load existing role message ID (if any)
 def load_role_message():
@@ -107,9 +116,11 @@ def load_role_message():
     except (FileNotFoundError, json.JSONDecodeError):
         return None
 
+
 def save_role_message(message_id):
     with open("role_config.json", "w") as file:
         json.dump({"role_message_id": message_id}, file)
+
 
 role_message_id = load_role_message()  # Load saved message ID
 
@@ -117,6 +128,7 @@ emoji_to_role = {
     "👳‍♀️": 1345361603805319288,  # Replace with actual role IDs
     "🧕": 1345361683845222441,
 }
+
 
 @bot.command()
 @commands.has_role("admin")
@@ -132,7 +144,10 @@ async def setrolemessage(ctx, message_id: int):
     for emoji in emoji_to_role.keys():
         await message.add_reaction(emoji)
 
-    await ctx.send(f"✅ Tracking reactions on message ID {message_id} with default emojis.")
+    await ctx.send(
+        f"✅ Tracking reactions on message ID {message_id} with default emojis."
+    )
+
 
 @bot.event
 async def on_raw_reaction_add(payload):
@@ -148,9 +163,14 @@ async def on_raw_reaction_add(payload):
             if member and role and not member.bot:
                 await member.add_roles(role)
 
-                log_channel = bot.get_channel(1345452618264350751)  # Replace with log channel ID
+                log_channel = bot.get_channel(
+                    1345452618264350751
+                )  # Replace with log channel ID
                 if log_channel:
-                    await log_channel.send(f"✅ Assigned {role.name} to {member.display_name}")
+                    await log_channel.send(
+                        f"✅ Assigned {role.name} to {member.display_name}"
+                    )
+
 
 @bot.event
 async def on_raw_reaction_remove(payload):
@@ -166,9 +186,14 @@ async def on_raw_reaction_remove(payload):
             if member and role and not member.bot:
                 await member.remove_roles(role)
 
-                log_channel = bot.get_channel(1345452618264350751)  # Replace with log channel ID
+                log_channel = bot.get_channel(
+                    1345452618264350751
+                )  # Replace with log channel ID
                 if log_channel:
-                    await log_channel.send(f"❌ Removed {role.name} from {member.display_name}")
+                    await log_channel.send(
+                        f"❌ Removed {role.name} from {member.display_name}"
+                    )
+
 
 @bot.command()
 async def khalas(ctx):
@@ -262,13 +287,20 @@ async def daily_reminder():
         count = 0
     for member in members_to_notify:
         try:
-            await member.send("📖 Reminder: Don't forget to complete your daily recitation!")
-            await member.send("Report your recitation at <#1345388935186087956>! or <#1345388978635014164>")
+            await member.send(
+                "📖 Reminder: Don't forget to complete your daily recitation!"
+            )
+            await member.send(
+                "Report your recitation at <#1345388935186087956>! or <#1345388978635014164>"
+            )
             count += 1
         except discord.Forbidden:
             await send_log_to_discord(f"❌ Couldn't send DM to {member.name}.")
 
-    await send_log_to_discord(f"✅ Sent reminders to a total of {count} Ikhwan and Akhwat!")
+    await send_log_to_discord(
+        f"✅ Sent reminders to a total of {count} Ikhwan and Akhwat!"
+    )
+
 
 @bot.command()
 async def progress(ctx):
@@ -314,6 +346,7 @@ async def stop_reminders(ctx):
     daily_reminder.cancel()
     await ctx.send("Daily reminders stopped!")
 
+
 @bot.command()
 @commands.has_role("admin")
 async def reset_reminders(ctx):
@@ -324,12 +357,14 @@ async def reset_reminders(ctx):
         daily_reminder.start()
         await ctx.send("Daily reminders have been reseted!")
 
+
 @bot.command()
 @commands.has_role("admin")
 async def reminder_status(ctx):
     """Checks if the reminder loop is running."""
     status = "✅ Running" if daily_reminder.is_running() else "⏹️ Stopped"
     await ctx.send(f"Reminder loop status: {status}")
+
 
 # Run the bot
 keep_alive()
