@@ -1,4 +1,4 @@
-![banner](img\ODOJ-bot_banner.png)
+![banner](img/ODOJ-bot_banner.png)
 
 ![Static Badge](https://img.shields.io/badge/development_status-under_development-green)
 
