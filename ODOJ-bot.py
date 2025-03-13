@@ -89,6 +89,8 @@ local_time = utc_now.astimezone(indonesia_tz)
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user.name}")
+    
+    date_check.start()
 
     await send_log_to_discord("✅ Bot is online!")
     logger.info("Bot is running!")
@@ -306,6 +308,9 @@ async def daily_reminder():
         f"✅ Sent reminders to a total of {count} Ikhwan and Akhwat!"
     )
 
+@tasks.loop(hours=24)
+async def date_check():
+    await send_log_to_discord(local_time)
 
 @bot.command()
 async def progress(ctx):
